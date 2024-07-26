@@ -25,6 +25,7 @@ def solve_regular(runtime_options=None):
     sys.path.append(str(base_folder / "../src"))
     from multi_period_dev import connect, get_my_data, prep_data, solve_multi_period_fpl, generate_team_json
     import data_parser as pr
+    
 
     if is_colab:
         # Read options from the file
@@ -78,9 +79,9 @@ def solve_regular(runtime_options=None):
                     """)
                 exit(0)
     data = prep_data(my_data, options)
-
     response = solve_multi_period_fpl(data, options)
     run_id = get_random_id(5)
+    
     for result in response:
         iter = result['iter']
         print(result['summary'])

@@ -15,6 +15,8 @@ import string
 from data_parser import read_data
 from itertools import product
 
+pd.set_option('future.no_silent_downcasting', True)
+
 def get_random_id(n):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(n))
 

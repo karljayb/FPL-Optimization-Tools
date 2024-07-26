@@ -10,6 +10,8 @@ solver/*
 */.ipynb_checkpoints/*
 data/fplreview.csv
 data/kiwi.csv
+data/ftvamps.csv
 data/TransferAlgorithm.csv
 data/login.json
 run/results/*.csv
+data/team.json

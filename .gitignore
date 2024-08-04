@@ -15,3 +15,4 @@ data/TransferAlgorithm.csv
 data/login.json
 run/results/*.csv
 data/team.json
+run/HiGHS.log

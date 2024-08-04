@@ -14,6 +14,10 @@ def read_data(options, source, weights=None):
         data = pd.read_csv(options.get('data_path', '../data/fplreview-odds.csv'))
         data['review_id'] = data['ID']
         return data
+    elif source == 'ftvamps':
+        data = pd.read_csv(options.get('data_path', '../data/ftvamps.csv'))
+        data['review_id'] = data['ID']
+        return data
     elif source == 'kiwi':
         kiwi_data = pd.read_csv(options.get('kiwi_data_path', '../data/kiwi.csv'))
         kiwi_data['review_id'] = kiwi_data['ID']

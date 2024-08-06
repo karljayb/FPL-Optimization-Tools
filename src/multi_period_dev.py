@@ -94,9 +94,10 @@ def generate_team_json(team_id):
     with requests.Session() as session:
         datasource = options.get('datasource', 'review')
 
-        if datasource == 'ftvamps':
+        if 'vamps' in datasource or 'jc_fanteam' in datasource:
             script_path = 'create_json.py'
-            subprocess.run(['python3', script_path], check=True)
+            ff_format = "ftvamps"
+            subprocess.run(['python3', script_path, ff_format], check=True)
             # Path to your local JSON file
             json_file_path = '../run/bootstrap-static.json'
             with open(json_file_path, 'r', encoding='utf-8') as file:
@@ -164,34 +165,61 @@ def generate_team_json(team_id):
 
 
 def calculate_fts(transfers, next_gw, fh):
+    datasource = options.get('datasource', 'review')
     n_transfers = {gw: 0 for gw in range(2, next_gw)}
     for t in transfers:
         n_transfers[t["event"]] += 1
     fts = {gw: 0 for gw in range(2, next_gw + 1)}
-    fts[2] = 1
+    if 'sdtvamps' in datasource:
+        fts[2] = 2
+    else:
+        fts[2] = 1
     for i in range(3, next_gw + 1):
         if (i - 1) == fh:
             fts[i] = 1
             continue
         fts[i] = fts[i - 1]
         fts[i] -= n_transfers[i - 1]
-        fts[i] = max(fts[i], 0)
-        fts[i] += 1
-        fts[i] = min(fts[i], 2)
+        if 'sdtvamps' in datasource:
+            fts[i] = max(fts[i], 2)
+            fts[i] += 1
+            fts[i] = min(fts[i], 4)
+        else:
+            fts[i] = max(fts[i], 0)
+            fts[i] += 1
+            fts[i] = min(fts[i], 2)
     return fts[next_gw]
 
 
 def prep_data(my_data, options):
     datasource = options.get('datasource', 'review')
 
-    if datasource == 'ftvamps':
+    if 'vamps' in datasource or 'jc_fanteam' in datasource:
         script_path = 'create_json.py'
-        subprocess.run(['python3', script_path], check=True)
+        if 'ftvamps' in datasource:
+            ff_format = "ftvamps"
+        elif 'sdtvamps' in datasource:
+            ff_format = "sdtvamps"
+        elif 'jc_fanteam' in datasource:
+            ff_format = "jc_fanteam"
+        subprocess.run(['python3', script_path, ff_format], check=True)
         # Path to your local JSON file
         json_file_path = '../run/bootstrap-static.json'
         # Load the JSON file
         with open(json_file_path, 'r', encoding='utf-8') as file:
             fpl_data = json.load(file)
+
+        for element_type in fpl_data['element_types']:
+            if element_type['id'] == 3:  # Midfielders
+                if 'sdtvamps' in datasource:
+                    element_type['squad_min_play'] = 3
+                else:
+                    element_type['squad_min_play'] = 2
+                break
+
+        # Save the updated JSON back to the file
+        with open('bootstrap-static.json', 'w') as file:
+            json.dump(fpl_data, file, indent=4)
     else:
         r = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/')
         fpl_data = r.json()
@@ -279,13 +307,26 @@ def prep_data(my_data, options):
                 price_modified_players.append(i['element'])
                 print(f"Added player {i['element']} to list, buy price {buy_price[i['element']]} sell price {sell_price[i['element']]}")
 
+    if 'sdtvamps' in datasource:
+        budget = options.get('max_budget', 50)
+        reduce_spend = budget - 50
+      
     itb = my_data['transfers']['bank']/10
-    if my_data['transfers']['limit'] is None:
-        ft = 1
+    if 'sdtvamps' in datasource:
+        itb = itb + reduce_spend
+        if my_data['transfers']['limit'] is None:
+            ft = 2
+        else:
+            ft = my_data['transfers']['limit'] - my_data['transfers']['made']
+        if ft < 2:
+            ft = 2
     else:
-        ft = my_data['transfers']['limit'] - my_data['transfers']['made']
-    if ft < 0:
-        ft = 0
+        if my_data['transfers']['limit'] is None:
+            ft = 1
+        else:
+            ft = my_data['transfers']['limit'] - my_data['transfers']['made']
+        if ft < 0:
+            ft = 0
     # If wildcard is active, then you have: "status_for_entry": "active" under my_data['chips']
     for c in my_data['chips']:
         if c['name'] == 'wildcard' and c['status_for_entry'] == 'active':
@@ -319,6 +360,9 @@ def prep_data(my_data, options):
 
 
 def solve_multi_period_fpl(data, options):
+    
+    datasource = options.get('datasource', 'review')
+
     """
     Solves multi-objective FPL problem with transfers
 
@@ -335,16 +379,25 @@ def solve_multi_period_fpl(data, options):
     horizon = options.get('horizon', 3)
     objective = options.get('objective', 'decay')
     decay_base = options.get('decay_base', 0.84)
-    bench_weights = options.get('bench_weights', {0: 0.03, 1: 0.21, 2: 0.06, 3: 0.002})
-    bench_weights = {int(key): value for (key,value) in bench_weights.items()}
+    if 'sdtvamps' not in datasource:
+        bench_weights = options.get('bench_weights', {0: 0.03, 1: 0.21, 2: 0.06, 3: 0.002})
+        bench_weights = {int(key): value for (key,value) in bench_weights.items()}
     # wc_limit = options.get('wc_limit', 0)
-    ft_value = options.get('ft_value', 1.5)
+    ft_value = options.get('ft_value', 1.5)    
     ft_value_list = options.get('ft_value_list', dict())
+    if 'sdtvamps' in datasource:
+        ft_value = options["ft_value"] = 0
+        ft_value_list = options["ft_value_list"] = {}
     ft_use_penalty = options.get('ft_use_penalty', None)
     itb_value = options.get('itb_value', 0.08)
-    ft = data.get('ft', 1)
-    if ft <= 0:
-        ft = 0
+    if 'sdtvamps' in datasource:
+        ft = data.get('ft', 2)
+        if ft <= 2:
+            ft = 2
+    else:
+        ft = data.get('ft', 1)
+        if ft <= 0:
+            ft = 0
     chip_limits = options.get('chip_limits', dict())
     allowed_chip_gws = options.get('allowed_chip_gws', dict())
     forced_chip_gws = options.get('forced_chip_gws', dict())
@@ -368,6 +421,8 @@ def solve_multi_period_fpl(data, options):
     if preseason:
         itb = 100
         threshold_gw = 2
+        if 'sdtvamps' in datasource:
+            itb = 50
     else:
         threshold_gw = next_gw
 
@@ -394,7 +449,8 @@ def solve_multi_period_fpl(data, options):
     lineup = model.add_variables(players, gameweeks, name='lineup', vartype=so.binary)
     captain = model.add_variables(players, gameweeks, name='captain', vartype=so.binary)
     vicecap = model.add_variables(players, gameweeks, name='vicecap', vartype=so.binary)
-    bench = model.add_variables(players, gameweeks, order, name='bench', vartype=so.binary)
+    if 'sdtvamps' not in datasource:    
+        bench = model.add_variables(players, gameweeks, order, name='bench', vartype=so.binary)
     transfer_in = model.add_variables(players, gameweeks, name='transfer_in', vartype=so.binary)
     # transfer_out = model.add_variables(players, gameweeks, name='transfer_out', vartype=so.binary)
     transfer_out_first = model.add_variables(price_modified_players, gameweeks, name='tr_out_first', vartype=so.binary)
@@ -404,7 +460,10 @@ def solve_multi_period_fpl(data, options):
     }
     in_the_bank = model.add_variables(all_gw, name='itb', vartype=so.continuous, lb=0)
     #free_transfers = model.add_variables(all_gw, name='ft', vartype=so.integer, lb=0, ub=2)
-    free_transfers = model.add_variables(all_gw, name='ft', vartype=so.integer, lb=0, ub=5)
+    if 'sdtvamps' in datasource:
+        free_transfers = model.add_variables(all_gw, name='ft', vartype=so.integer, lb=2, ub=4)
+    else:
+        free_transfers = model.add_variables(all_gw, name='ft', vartype=so.integer, lb=0, ub=5)
     ft_above_ub = model.add_variables(gameweeks, name='ft_over', vartype=so.binary)
     ft_below_lb = model.add_variables(gameweeks, name='ft_below', vartype=so.binary)
     free_transfers_state = model.add_variables(gameweeks, ft_states, name='ft_state', vartype=so.binary)
@@ -476,24 +535,31 @@ def solve_multi_period_fpl(data, options):
     model.add_constraints((squad[p, next_gw-1] == 0 for p in players if p not in initial_squad), name='initial_squad_others')
     model.add_constraint(in_the_bank[next_gw-1] == itb, name='initial_itb')
     model.add_constraint(free_transfers[next_gw] == ft, name='initial_ft')
-    model.add_constraints((free_transfers[w] >= 1 for w in gameweeks if w > next_gw), name='future_ft_limit')
+    if 'sdtvamps' in datasource:
+        model.add_constraints((free_transfers[w] >= 2 for w in gameweeks if w > next_gw), name='future_ft_limit')
+    else:
+        model.add_constraints((free_transfers[w] >= 1 for w in gameweeks if w > next_gw), name='future_ft_limit')
 
     # Constraints
     model.add_constraints((squad_count[w] == 15 for w in gameweeks), name='squad_count')
     model.add_constraints((squad_fh_count[w] == 15 * use_fh[w] for w in gameweeks), name='squad_fh_count')
     model.add_constraints((so.expr_sum(lineup[p,w] for p in players) == 11 + 4 * use_bb[w] for w in gameweeks), name='lineup_count')
-    model.add_constraints((so.expr_sum(bench[p,w,0] for p in players if player_type[p] == 1) == 1 - use_bb[w] for w in gameweeks), name='bench_gk')
-    model.add_constraints((so.expr_sum(bench[p,w,o] for p in players) == 1 - use_bb[w] for w in gameweeks for o in [1,2,3]), name='bench_count')
+    if 'sdtvamps' not in datasource:
+        model.add_constraints((so.expr_sum(bench[p,w,0] for p in players if player_type[p] == 1) == 1 - use_bb[w] for w in gameweeks), name='bench_gk')
+        model.add_constraints((so.expr_sum(bench[p,w,o] for p in players) == 1 - use_bb[w] for w in gameweeks for o in [1,2,3]), name='bench_count')
     model.add_constraints((so.expr_sum(captain[p,w] for p in players) == 1 for w in gameweeks), name='captain_count')
     model.add_constraints((so.expr_sum(vicecap[p,w] for p in players) == 1 for w in gameweeks), name='vicecap_count')
     model.add_constraints((lineup[p,w] <= squad[p,w] + use_fh[w] for p in players for w in gameweeks), name='lineup_squad_rel')
-    model.add_constraints((bench[p,w,o] <= squad[p,w] + use_fh[w] for p in players for w in gameweeks for o in order), name='bench_squad_rel')
+    if 'sdtvamps' not in datasource:
+        model.add_constraints((bench[p,w,o] <= squad[p,w] + use_fh[w] for p in players for w in gameweeks for o in order), name='bench_squad_rel')
     model.add_constraints((lineup[p,w] <= squad_fh[p,w] + 1 - use_fh[w] for p in players for w in gameweeks), name='lineup_squad_fh_rel')
-    model.add_constraints((bench[p,w,o] <= squad_fh[p,w] + 1 - use_fh[w] for p in players for w in gameweeks for o in order), name='bench_squad_fh_rel')
+    if 'sdtvamps' not in datasource:
+        model.add_constraints((bench[p,w,o] <= squad_fh[p,w] + 1 - use_fh[w] for p in players for w in gameweeks for o in order), name='bench_squad_fh_rel')
     model.add_constraints((captain[p,w] <= lineup[p,w] for p in players for w in gameweeks), name='captain_lineup_rel')
     model.add_constraints((vicecap[p,w] <= lineup[p,w] for p in players for w in gameweeks), name='vicecap_lineup_rel')
     model.add_constraints((captain[p,w] + vicecap[p,w] <= 1 for p in players for w in gameweeks), name='cap_vc_rel')
-    model.add_constraints((lineup[p,w] + so.expr_sum(bench[p,w,o] for o in order) <= 1 for p in players for w in gameweeks), name='lineup_bench_rel')
+    if 'sdtvamps' not in datasource:
+        model.add_constraints((lineup[p,w] + so.expr_sum(bench[p,w,o] for o in order) <= 1 for p in players for w in gameweeks), name='lineup_bench_rel')
     model.add_constraints((lineup_type_count[t,w] >= type_data.loc[t, 'squad_min_play'] for t in element_types for w in gameweeks), name='valid_formation_lb')
     model.add_constraints((lineup_type_count[t,w] <= type_data.loc[t, 'squad_max_play'] + use_bb[w] for t in element_types for w in gameweeks), name='valid_formation_ub')
     model.add_constraints((squad_type_count[t,w] == type_data.loc[t, 'squad_select'] for t in element_types for w in gameweeks), name='valid_squad')
@@ -508,20 +574,34 @@ def solve_multi_period_fpl(data, options):
     model.add_constraints((transfer_out[p,w] <= 1-use_fh[w] for p in players for w in gameweeks), name='no_tr_out_fh')
     ## Free transfer constraints
     # 2024-2025 variation: min 1 / max 5 / roll over WC & FH
-    raw_gw_ft = {w: free_transfers[w] - number_of_transfers[w] + 1 - use_wc[w] - use_fh[w] for w in gameweeks}
-    model.add_constraints((free_transfers[w+1] <= raw_gw_ft[w] + 16 * ft_below_lb[w] for w in gameweeks if w+1 in gameweeks), name='newft1')
-    model.add_constraints((free_transfers[w+1] <= 1 + 4 * (1-ft_below_lb[w]) for w in gameweeks if w+1 in gameweeks), name='newft2')
-    model.add_constraints((free_transfers[w+1] >= raw_gw_ft[w] - 2 * ft_above_ub[w] for w in gameweeks if w+1 in gameweeks and w > 1), name='newft3')
-    model.add_constraints((free_transfers[w+1] >= 5 - 5 * (1-ft_above_ub[w]) for w in gameweeks if w+1 in gameweeks and w > 1), name='newft4')
+    if 'sdtvamps' in datasource:
+        model.add_constraints((aux[w] >= (number_of_transfers[w]/4) for w in gameweeks if w+1 in gameweeks), name='force_aux_1')
+        model.add_constraints((free_transfers[w+1] <= 2 * aux[w] + 4 * (1-aux[w]) for w in gameweeks if w+1 in gameweeks), name='aux_ft_rel1')
+        model.add_constraints((free_transfers[w+1] <= free_transfers[w] + 1 * (1-aux[w]) for w in gameweeks if w+1 in gameweeks), name='aux_ft_rel2')
+    else:
+        if 'ftvamps' in datasource or 'jc_fanteam' in datasource:
+            # Reset free transfers to 1 after wildcard use
+            model.add_constraints((free_transfers[w+1] <= 1 + 4 * (1 - use_wc[w]) for w in gameweeks if w+1 in gameweeks), name='reset_ft_after_wc')
 
-    model.add_constraints((free_transfers[w] == so.expr_sum(free_transfers_state[w,s] * s for s in ft_states) for w in gameweeks), name='ftsc1')
-    model.add_constraints((so.expr_sum(free_transfers_state[w,s] for s in ft_states) == 1 for w in gameweeks), name='ftsc2')
+        raw_gw_ft = {w: free_transfers[w] - number_of_transfers[w] + 1 - use_wc[w] - use_fh[w] for w in gameweeks}
+        model.add_constraints((free_transfers[w+1] <= raw_gw_ft[w] + 16 * ft_below_lb[w] for w in gameweeks if w+1 in gameweeks), name='newft1')
+        model.add_constraints((free_transfers[w+1] <= 1 + 4 * (1-ft_below_lb[w]) for w in gameweeks if w+1 in gameweeks), name='newft2')
+        model.add_constraints((free_transfers[w+1] >= raw_gw_ft[w] - 2 * ft_above_ub[w] for w in gameweeks if w+1 in gameweeks and w > 1), name='newft3')
+        model.add_constraints((free_transfers[w+1] >= 5 - 5 * (1-ft_above_ub[w]) for w in gameweeks if w+1 in gameweeks and w > 1), name='newft4')
+
+        model.add_constraints((free_transfers[w] == so.expr_sum(free_transfers_state[w,s] * s for s in ft_states) for w in gameweeks), name='ftsc1')
+        model.add_constraints((so.expr_sum(free_transfers_state[w,s] for s in ft_states) == 1 for w in gameweeks), name='ftsc2')
+    
     # Pre 2024-2025 season
     #model.add_constraints((free_transfers[w] == aux[w] + 1 for w in gameweeks if w > threshold_gw), name='aux_ft_rel')
     #model.add_constraints((free_transfers[w-1] - number_of_transfers[w-1] - 2 * use_wc[w-1] - 2 * use_fh[w-1] <= 2 * aux[w] for w in gameweeks if w > threshold_gw), name='force_aux_1')
     #model.add_constraints((free_transfers[w-1] - number_of_transfers[w-1] - 2 * use_wc[w-1] - 2 * use_fh[w-1] >= aux[w] + (-14)*(1-aux[w]) for w in gameweeks if w > threshold_gw), name='force_aux_2')
     if preseason and threshold_gw in gameweeks:
-        model.add_constraint(free_transfers[threshold_gw] == 1, name='ps_initial_ft')
+        if 'sdtvamps' in datasource:
+            model.add_constraint(free_transfers[threshold_gw] == 2, name='ps_initial_ft')
+        else:
+            model.add_constraint(free_transfers[threshold_gw] == 1, name='ps_initial_ft')
+
     model.add_constraints((penalized_transfers[w] >= transfer_diff[w] for w in gameweeks), name='pen_transfer_rel')
     
     
@@ -624,10 +704,11 @@ def solve_multi_period_fpl(data, options):
 
     if options.get("num_transfers", None) is not None:
         model.add_constraint(so.expr_sum(transfer_in[p,next_gw] for p in players) == options['num_transfers'], name='tr_limit')
-
+    if 'sdtvamps' in datasource:
+        options["hit_limit"] = 0
     if options.get("hit_limit", None) is not None:
         model.add_constraint(so.expr_sum(penalized_transfers[w] for w in gameweeks) <= options['hit_limit'], name='horizon_hit_limit')
-
+    
     # pre 2024-25 season
     # if options.get("ft_custom_value", None) is not None:
     #     ft_custom_value = {int(key): value for (key, value) in options.get('ft_custom_value', {}).items()}
@@ -723,7 +804,11 @@ def solve_multi_period_fpl(data, options):
 
     # Objectives
     hit_cost = options.get('hit_cost', 4)
-    gw_xp = {w: so.expr_sum(points_player_week[p,w] * (lineup[p,w] + captain[p,w] + 0.1*vicecap[p,w] + use_tc[p,w] + so.expr_sum(bench_weights[o] * bench[p,w,o] for o in order)) for p in players) for w in gameweeks}
+    if 'sdtvamps' in datasource:
+        gw_xp = {w: so.expr_sum(points_player_week[p,w] * (lineup[p,w] + captain[p,w] + 0.1*vicecap[p,w]) for p in players) for w in gameweeks}
+    else:
+        gw_xp = {w: so.expr_sum(points_player_week[p,w] * (lineup[p,w] + captain[p,w] + 0.1*vicecap[p,w] + use_tc[p,w] + so.expr_sum(bench_weights[o] * bench[p,w,o] for o in order)) for p in players) for w in gameweeks}
+    
     #pre 2024-25
     #gw_total = {w: gw_xp[w] - hit_cost * penalized_transfers[w] + ft_gw_value.get(w, ft_value) * free_transfers[w] - ft_penalty[w] + itb_value * in_the_bank[w] for w in gameweeks}
     gw_total = {w: gw_xp[w] - hit_cost * penalized_transfers[w] + gw_ft_gain[w] - ft_penalty[w] + itb_value * in_the_bank[w] for w in gameweeks}
@@ -876,10 +961,11 @@ def solve_multi_period_fpl(data, options):
                     is_tc = 1 if use_tc[p,w].get_value() > 0.5 else 0
                     is_transfer_in = 1 if transfer_in[p,w].get_value() > 0.5 else 0
                     is_transfer_out = 1 if transfer_out[p,w].get_value() > 0.5 else 0
-                    bench_value = -1
-                    for o in order:
-                        if bench[p,w,o].get_value() > 0.5:
-                            bench_value = o
+                    if 'sdtvamps' not in datasource:
+                        bench_value = -1
+                        for o in order:
+                            if bench[p,w,o].get_value() > 0.5:
+                                bench_value = o
                     position = type_data.loc[lp['element_type'], 'singular_name_short']
                     player_buy_price = 0 if not is_transfer_in else buy_price[p]
                     player_sell_price = 0 if not is_transfer_out else (sell_price[p] if p in price_modified_players and transfer_out_first[p,w].get_value() > 0.5 else buy_price[p])
@@ -898,15 +984,24 @@ def solve_multi_period_fpl(data, options):
                         chip_text = 'TC'
                     else:
                         chip_text = ''
-                    
-                    picks.append([
+                    if 'sdtvamps' in datasource:
+                        picks.append([
+                            p, w, lp['web_name'], position, lp['element_type'], lp['name'], player_buy_price, player_sell_price, round(points_player_week[p,w],2), minutes_player_week[p,w], is_squad, is_lineup, is_captain, is_vice, is_transfer_in, is_transfer_out, multiplier, xp_cont, chip_text, currrent_iter
+                        ])
+                    else:
+                        picks.append([
                         p, w, lp['web_name'], position, lp['element_type'], lp['name'], player_buy_price, player_sell_price, round(points_player_week[p,w],2), minutes_player_week[p,w], is_squad, is_lineup, bench_value, is_captain, is_vice, is_transfer_in, is_transfer_out, multiplier, xp_cont, chip_text, currrent_iter
                     ])
-
-        picks_df = pd.DataFrame(picks, columns=['id', 'week', 'name', 'pos', 'type', 'team', 'buy_price', 'sell_price', 'xP', 'xMin', 'squad', 'lineup', 'bench', 'captain', 'vicecaptain', 'transfer_in', 'transfer_out', 'multiplier', 'xp_cont', 'chip', 'iter']).sort_values(by=['week', 'lineup', 'type', 'xP'], ascending=[True, False, True, True])
+        if 'sdtvamps' in datasource:
+            picks_df = pd.DataFrame(picks, columns=['id', 'week', 'name', 'pos', 'type', 'team', 'buy_price', 'sell_price', 'xP', 'xMin', 'squad', 'lineup', 'captain', 'vicecaptain', 'transfer_in', 'transfer_out', 'multiplier', 'xp_cont', 'chip', 'iter']).sort_values(by=['week', 'lineup', 'type', 'xP'], ascending=[True, False, True, True])
+        else:
+            picks_df = pd.DataFrame(picks, columns=['id', 'week', 'name', 'pos', 'type', 'team', 'buy_price', 'sell_price', 'xP', 'xMin', 'squad', 'lineup', 'bench', 'captain', 'vicecaptain', 'transfer_in', 'transfer_out', 'multiplier', 'xp_cont', 'chip', 'iter']).sort_values(by=['week', 'lineup', 'type', 'xP'], ascending=[True, False, True, True])
         total_xp = so.expr_sum((lineup[p,w] + captain[p,w]) * points_player_week[p,w] for p in players for w in gameweeks).get_value()
 
-        picks_df.sort_values(by=['week', 'squad', 'lineup', 'bench', 'type'], ascending=[True, False, False, True, True], inplace=True)
+        if 'sdtvamps' in datasource:
+            picks_df.sort_values(by=['week', 'squad', 'lineup', 'type'], ascending=[True, False, False, True], inplace=True)
+        else:
+            picks_df.sort_values(by=['week', 'squad', 'lineup', 'bench', 'type'], ascending=[True, False, False, True, True], inplace=True)
 
         # Writing summary
         summary_of_actions = ""
@@ -931,7 +1026,8 @@ def solve_multi_period_fpl(data, options):
                         move_summary['sell'].append(merged_data['web_name'][p])
 
             lineup_players = picks_df[(picks_df['week'] == w) & (picks_df['lineup'] == 1)]
-            bench_players = picks_df[(picks_df['week'] == w) & (picks_df['bench'] >= 0)]
+            if 'sdtvamps' not in datasource:
+                bench_players = picks_df[(picks_df['week'] == w) & (picks_df['bench'] >= 0)]
 
             # captain_name = picks_df[(picks_df['week'] == w) & (picks_df['captain'] == 1)].iloc[0]['name']
             # vicecap_name = picks_df[(picks_df['week'] == w) & (picks_df['vicecaptain'] == 1)].iloc[0]['name']
@@ -945,7 +1041,8 @@ def solve_multi_period_fpl(data, options):
                 type_players = lineup_players[lineup_players['type'] == type]
                 entries = type_players.apply(get_display, axis=1)
                 summary_of_actions += '\t' + ', '.join(entries.tolist()) + "\n"
-            summary_of_actions += "Bench: \n\t" + ', '.join(bench_players['name'].tolist()) + "\n"
+            if 'sdtvamps' not in datasource:
+                summary_of_actions += "Bench: \n\t" + ', '.join(bench_players['name'].tolist()) + "\n"
             summary_of_actions += "Lineup xPts: " + str(round(lineup_players['xp_cont'].sum(),2)) + "\n---\n\n"
             cumulative_xpts = cumulative_xpts + round(lineup_players['xp_cont'].sum(),2)
         print("Cumulative xPts: " + str(round(cumulative_xpts,2)) + "\n---\n\n")

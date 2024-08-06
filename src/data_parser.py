@@ -18,6 +18,14 @@ def read_data(options, source, weights=None):
         data = pd.read_csv(options.get('data_path', '../data/ftvamps.csv'))
         data['review_id'] = data['ID']
         return data
+    elif source == 'sdtvamps':
+        data = pd.read_csv(options.get('data_path', '../data/sdtvamps.csv'))
+        data['review_id'] = data['ID']
+        return data
+    elif source == 'jc_fanteam':
+        data = pd.read_csv(options.get('data_path', '../data/jc_fanteam_model.csv'))
+        data['review_id'] = data['ID']
+        return data
     elif source == 'kiwi':
         kiwi_data = pd.read_csv(options.get('kiwi_data_path', '../data/kiwi.csv'))
         kiwi_data['review_id'] = kiwi_data['ID']

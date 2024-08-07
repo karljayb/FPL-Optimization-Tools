@@ -8,9 +8,11 @@ output/*
 archive/*
 solver/*
 */.ipynb_checkpoints/*
-data/fplreview.csv
+data/fplreview*
 data/kiwi.csv
-data/ftvamps.csv
+data/ftvamps*
+data/sdtvamps*
+data/jc_fanteam*
 data/TransferAlgorithm.csv
 data/login.json
 run/results/*.csv

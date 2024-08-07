@@ -28,8 +28,8 @@ if __name__ == '__main__':
 
     if 'ftvamps' in ff_format:
         script_path = 'ft_player_updates.py'
-        subprocess.run(['python3', script_path], check=True)
+        subprocess.run(['python', script_path], check=True)
     elif 'sdtvamps' in ff_format:
         script_path = 'sdt_player_updates.py'
-        subprocess.run(['python3', script_path], check=True)
+        subprocess.run(['python', script_path], check=True)
 

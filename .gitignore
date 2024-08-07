@@ -10,9 +10,10 @@ solver/*
 */.ipynb_checkpoints/*
 data/fplreview*
 data/kiwi.csv
-data/ftvamps*
-data/sdtvamps*
-data/jc_fanteam*
+data/ftvamps.csv
+data/sdtvamps.csv
+data/jc_fanteam_model.csv
+data/jc_fanteam_model_RAW.csv
 data/TransferAlgorithm.csv
 data/login.json
 run/results/*.csv

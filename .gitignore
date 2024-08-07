@@ -10,5 +10,6 @@ solver/*
 */.ipynb_checkpoints/*
 data/*.csv
 data/*.json
+data/*.py
 run/results/*.csv
 run/HiGHS.log

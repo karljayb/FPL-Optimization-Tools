@@ -212,16 +212,21 @@ def prep_data(my_data, options):
         with open(json_file_path, 'r', encoding='utf-8') as file:
             fpl_data = json.load(file)
 
-        for element_type in fpl_data['element_types']:
-            if element_type['id'] == 2:  # Defenders
-                if 'sdtvamps' in datasource:
-                    max_def = options.get('max_defenders', 5)
+        if 'sdtvamps' in datasource:
+            max_def = options.get('max_defenders', 5)  # Set default max_def value before the loop
+            min_mid = 3  # Default minimum midfielders
+            
+            if max_def == 3:
+                min_mid = 4
+
+            for element_type in fpl_data['element_types']:
+                if element_type['id'] == 2:  # Defenders
                     element_type['squad_max_play'] = max_def
-                break
-            if element_type['id'] == 3:  # Midfielders
-                if 'sdtvamps' in datasource:
-                    element_type['squad_min_play'] = 3
-                break
+
+                elif element_type['id'] == 3:  # Midfielders
+                    element_type['squad_min_play'] = min_mid
+
+
 
         # Save the updated JSON back to the file
         with open('bootstrap-static.json', 'w') as file:
@@ -292,7 +297,7 @@ def prep_data(my_data, options):
         merged_data = merged_data[(merged_data['total_ev'] / merged_data['now_cost'] > cutoff) | (merged_data['review_id'].isin(safe_players))].copy()
 
     print(len(merged_data), "total players (after)")
-
+    
     if options.get('randomized', False):
         rng = np.random.default_rng(seed = options.get('seed'))
         gws = list(range(gw, min(39, gw+horizon)))

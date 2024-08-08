@@ -213,11 +213,14 @@ def prep_data(my_data, options):
             fpl_data = json.load(file)
 
         for element_type in fpl_data['element_types']:
+            if element_type['id'] == 2:  # Defenders
+                if 'sdtvamps' in datasource:
+                    max_def = options.get('max_defenders', 5)
+                    element_type['squad_max_play'] = max_def
+                break
             if element_type['id'] == 3:  # Midfielders
                 if 'sdtvamps' in datasource:
                     element_type['squad_min_play'] = 3
-                else:
-                    element_type['squad_min_play'] = 2
                 break
 
         # Save the updated JSON back to the file
@@ -709,6 +712,9 @@ def solve_multi_period_fpl(data, options):
 
     if options.get("no_future_transfer"):
         model.add_constraint(so.expr_sum(transfer_in[p,w] for p in players for w in gameweeks if w > next_gw and w != options.get('use_wc')) == 0, name='no_future_transfer')
+
+    if options.get("no_future_transfer_def"):
+        model.add_constraint(so.expr_sum(transfer_in[p,w] for p in players for w in gameweeks if merged_data.loc[p, 'Pos'] in {'D'} and w > next_gw and w != options.get('use_wc')) == 0, name='no_future_transfer_def')
 
     if options.get("no_transfer_last_gws"):
         no_tr_gws = options['no_transfer_last_gws']

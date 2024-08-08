@@ -291,12 +291,6 @@ If you want to run sensitivity analysis, instead of running `solve_regular.py`,
   python sensitivity.py --gw 1 --wildcard Y
   ``` 
 
-# License
-
-[Apache-2.0 License](LICENSE)
-
-
-
 
 # Added features for SDT (Sun Dream Team)
 
@@ -335,3 +329,16 @@ Updating your team on a weekly basis. Currently, this has to be done via a manua
 See the SDT section above for more detail and the team_ft.sample file
 
 Note, I have left the free transfer limit as a max of 5 like FPL as I don't think it is wise to save more than that number. I have set them to reset to 1 after WC use.
+
+
+# License
+This project is dual-licensed under the Apache License 2.0 and a Commercial License.
+
+Apache License 2.0
+You may use this project under the terms of the Apache License 2.0. See LICENSE file for details.
+
+Commercial License
+For commercial use, please contact info@fploptimized.com to obtain a commercial license.
+
+Contributor License Agreement
+By contributing to this project, you agree that your contributions can be licensed under both the Apache License 2.0 and the Commercial License.

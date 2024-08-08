@@ -1,0 +1,86 @@
+{
+    "picks": [
+        {
+            "element": 465,
+            "selling_price": 10,
+            "purchase_price": 10
+        },
+        {
+            "element": 362,
+            "selling_price": 45,
+            "purchase_price": 45
+        },
+        {
+            "element": 3,
+            "selling_price": 50,
+            "purchase_price": 50
+        },
+        {
+            "element": 18,
+            "selling_price": 50,
+            "purchase_price": 50
+        },
+        {
+            "element": 339,
+            "selling_price": 50,
+            "purchase_price": 50
+        },
+        {
+            "element": 335,
+            "selling_price": 45,
+            "purchase_price": 45
+        },
+        {
+            "element": 99,
+            "selling_price": 35,
+            "purchase_price": 35
+        },
+        {
+            "element": 385,
+            "selling_price": 40,
+            "purchase_price": 40
+        },
+        {
+            "element": 207,
+            "selling_price": 35,
+            "purchase_price": 35
+        },
+        {
+            "element": 108,
+            "selling_price": 40,
+            "purchase_price": 40
+        },
+        {
+            "element": 401,
+            "selling_price": 50,
+            "purchase_price": 50
+        }
+    ],
+    "chips": [
+        {
+            "status_for_entry": "available",
+            "played_by_entry": [],
+            "name": "bboost",
+            "number": 1,
+            "start_event": 1,
+            "stop_event": 38,
+            "chip_type": "team",
+            "is_pending": false
+        },
+        {
+            "status_for_entry": "available",
+            "played_by_entry": [],
+            "name": "3xc",
+            "number": 1,
+            "start_event": 1,
+            "stop_event": 38,
+            "chip_type": "team",
+            "is_pending": false
+        }
+    ],
+    "transfers": {
+        "limit": null,
+        "made": 0,
+        "bank": 50
+    }
+}

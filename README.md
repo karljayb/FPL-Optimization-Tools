@@ -294,3 +294,44 @@ If you want to run sensitivity analysis, instead of running `solve_regular.py`,
 # License
 
 [Apache-2.0 License](LICENSE)
+
+
+
+
+# Added features for SDT (Sun Dream Team)
+
+To run change the datasource to use a file in fplreview.csv column format but with the correct file name.
+EG: python solve_regular.py --datasource sdtreview (where sdtreview.csv is the model data file you want to use).
+
+This is currently only set up to work with one source: sdtvamps. 
+- To support Vamps's work you can buy him a coffee here: https://ko-fi.com/ff_vamps
+
+Updating your team on a weekly basis. Currently, this has to be done via a manual edit to a copy of the team.json file.
+See the team_sdt.sample file in the data folder.
+Player changes:
+```
+"element": 108,
+"selling_price": 40,
+"purchase_price": 40
+```
+Money left over or transfers already made:
+```
+"limit": null,
+"made": 0,
+"bank": 50
+```
+
+
+# Added features for FT (Fan Team)
+
+To run change the datasource to use a file in fplreview.csv column format but with the correct file name.
+EG: python solve_regular.py --datasource ftreview (where ftreview.csv is the model data file you want to use).
+
+This is currently only set up to work with two sources: ftvamps or jc_fanteam_model. 
+- To support JC's work you can buy him a coffee here: https://ko-fi.com/fplspaceman
+- To support Vamps's work you can buy him a coffee here: https://ko-fi.com/ff_vamps
+
+Updating your team on a weekly basis. Currently, this has to be done via a manual edit to a copy of the team.json file.
+See the SDT section above for more detail and the team_ft.sample file
+
+Note, I have left the free transfer limit as a max of 5 like FPL as I don't think it is wise to save more than that number. I have set them to reset to 1 after WC use.

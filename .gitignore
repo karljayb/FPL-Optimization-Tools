@@ -13,3 +13,4 @@ data/*.json
 data/*.py
 run/results/*.csv
 run/HiGHS.log
+run/tmp/*

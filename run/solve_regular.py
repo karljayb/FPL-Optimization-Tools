@@ -67,8 +67,15 @@ def solve_regular(runtime_options=None):
                 exit(0)
             my_data = generate_team_json(team_id)
         else:
+            datasource = options.get('datasource', 'review')
+            if 'sdtvamps' in datasource:
+                team_json_dir = '../data/team_sdt.json'
+            elif 'ftvamps' in datasource or 'jc_fanteam' in datasource:
+                team_json_dir = '../data/team_ft.json'
+            else:
+                team_json_dir = '../data/team.json'
             try:
-                with open('../data/team.json') as f:
+                with open(team_json_dir) as f:
                     my_data = json.load(f)
             except FileNotFoundError:
                 print(

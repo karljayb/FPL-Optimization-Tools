@@ -96,7 +96,12 @@ def generate_team_json(team_id):
 
         if 'vamps' in datasource or 'jc_fanteam' in datasource:
             script_path = 'create_json.py'
-            ff_format = "ftvamps"
+            if 'jc_fanteam' in datasource:
+                ff_format = "jc_fanteam"
+            elif 'ftvamps' in datasource:
+                ff_format = "ftvamps"
+            elif 'dtvamps' in datasource:
+                ff_format = "dtvamps"
             subprocess.run(['python', script_path, ff_format], check=True)
             # Path to your local JSON file
             json_file_path = '../run/bootstrap-static.json'
@@ -127,6 +132,8 @@ def generate_team_json(team_id):
 
     if 'dtvamps' in datasource:
         itb = 500 - sum(squad.values())
+    elif 'ftvamps2' in datasource or 'jc_fanteam2' in datasource:
+        itb = 10000 - sum(squad.values())
     else:
         itb = 1000 - sum(squad.values())
     for t in transfers:
@@ -423,6 +430,8 @@ def solve_multi_period_fpl(data, options):
         threshold_gw = 2
         if 'dtvamps' in datasource:
             itb = 50
+        elif 'ftvamps2' in datasource or 'jc_fanteam2' in datasource:
+            itb = 1000
     else:
         threshold_gw = next_gw
 
@@ -703,7 +712,8 @@ def solve_multi_period_fpl(data, options):
     if options.get('banned', None) is not None:
         banned_players = options['banned']
         model.add_constraints((so.expr_sum(squad[p,w] for w in gameweeks) == 0 for p in banned_players), name='ban_player')
-        model.add_constraints((so.expr_sum(squad_fh[p,w] for w in gameweeks) == 0 for p in banned_players), name='ban_player_fh')
+        if 'dtvamps' not in datasource:
+            model.add_constraints((so.expr_sum(squad_fh[p,w] for w in gameweeks) == 0 for p in banned_players), name='ban_player_fh')
     
     if options.get('banned_next_gw', None) is not None:
         banned_in_gw = [(x, gameweeks[0]) if isinstance(x, int) else tuple(x) for x in options['banned_next_gw']]

@@ -17,6 +17,7 @@
     "ev_per_price_cutoff": 20,
     "banned": [],
     "locked": [],
+    "locked_next_gw": [],
     "keep": [],
     "delete_tmp": true,
     "single_solve": true,

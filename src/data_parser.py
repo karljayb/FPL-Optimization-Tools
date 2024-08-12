@@ -14,7 +14,7 @@ def read_data(options, source, weights=None):
         data = pd.read_csv(options.get('data_path', '../data/fplreview-odds.csv'))
         data['review_id'] = data['ID']
         return data
-    elif source == 'ftvamps':
+    elif source.startswith('ftvamps'):
         data = pd.read_csv(options.get('data_path', '../data/ftvamps.csv'))
         data['review_id'] = data['ID']
         return data
@@ -22,7 +22,7 @@ def read_data(options, source, weights=None):
         data = pd.read_csv(options.get('data_path', '../data/dtvamps.csv'))
         data['review_id'] = data['ID']
         return data
-    elif source == 'jc_fanteam':
+    elif source.startswith('jc_fanteam'):
         data = pd.read_csv(options.get('data_path', '../data/jc_fanteam_model.csv'))
         data['review_id'] = data['ID']
         return data

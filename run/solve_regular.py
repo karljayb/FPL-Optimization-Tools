@@ -26,12 +26,18 @@ def solve_regular(runtime_options=None):
     from multi_period_dev import connect, get_my_data, prep_data, solve_multi_period_fpl, generate_team_json
     import data_parser as pr
     
+    ff_version = input("What FF Format are you trying to solve? Valid answers are 'DT', 'FPL', or 'FT' ")
 
     if is_colab:
         # Read options from the file
         with open('settings.json') as f:
             options = json.load(f)
-
+    elif ff_version == 'DT' or ff_version == 'dt':
+        with open('../data/regular_settings_dt.json') as f:
+            options = json.load(f)
+    elif ff_version == 'FT' or ff_version == 'ft':
+        with open('../data/regular_settings_ft.json') as f:
+            options = json.load(f)
     else:
         # Read options from the file
         with open('../data/regular_settings.json') as f:
@@ -68,8 +74,8 @@ def solve_regular(runtime_options=None):
             my_data = generate_team_json(team_id)
         else:
             datasource = options.get('datasource', 'review')
-            if 'sdtvamps' in datasource:
-                team_json_dir = '../data/team_sdt.json'
+            if 'dtvamps' in datasource:
+                team_json_dir = '../data/team_dt.json'
             elif 'ftvamps' in datasource or 'jc_fanteam' in datasource:
                 team_json_dir = '../data/team_ft.json'
             else:

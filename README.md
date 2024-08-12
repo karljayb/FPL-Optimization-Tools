@@ -154,7 +154,7 @@ You will need to follow steps below to install required platform and also optimi
     `"force_ft_state":[[4,3], [7,2]]` will force solver to have at least 3 FTs in GW4, and 2 FTs in GW7
   - `force_ft_state_ub`: list of GWs and maximum number of FTs to force to have (format is (GW, state))  
     `"force_ft_state":[[4,4], [7,3]]` will force solver to have at most 4 FTs in GW4, and 3 FTs in GW7  
-  - `"max_defenders": 3` applies only to the SDT game. Allows you to set a maximum amount of defenders. Valid values are 3, 4, 5. Default is 5.
+  - `"max_defenders": 3` applies only to the DT game. Allows you to set a maximum amount of defenders. Valid values are 3, 4, 5. Default is 5.
   - `randomized`: `true` or `false` whether you would like to add random noise to EV
   - `xmin_lb`: cut-off for dropping players below this many minutes expectation
   - `ev_per_price_cutoff`: cut-off percentile for dropping players based on total EV per price (e.g. `20` means drop players below 20% percentile)
@@ -294,16 +294,17 @@ If you want to run sensitivity analysis, instead of running `solve_regular.py`,
   ``` 
 
 
-# Added features for SDT (Sun Dream Team)
+# Added features for DT (Dream Team)
 
 To run change the datasource to use a file in fplreview.csv column format but with the correct file name.
-EG: python solve_regular.py --datasource sdtreview (where sdtreview.csv is the model data file you want to use).
-
-This is currently only set up to work with one source: sdtvamps. 
+You will need to have Player IDs that match the IDs used by FPL.
+This is currently only set up to work with one source: dtvamps. 
 - To support Vamps's work you can buy him a coffee here: https://ko-fi.com/ff_vamps
 
+You will be prompted as to which version to run. Enter DT for this format and amend a file called regular_settings_dt.json for configuring options.
+
 Updating your team on a weekly basis. Currently, this has to be done via a manual edit to a copy of the team.json file.
-See the team_sdt.sample file in the data folder.
+See the team_dt.sample file in the data folder.
 Player changes:
 ```
 "element": 108,
@@ -321,14 +322,16 @@ Money left over or transfers already made:
 # Added features for FT (Fan Team)
 
 To run change the datasource to use a file in fplreview.csv column format but with the correct file name.
-EG: python solve_regular.py --datasource ftreview (where ftreview.csv is the model data file you want to use).
+You will need to have Player IDs that match the IDs used by FPL.
 
-This is currently only set up to work with two sources: ftvamps or jc_fanteam_model. 
+This is currently only set up to work with two sources: 'ftvamps' or 'jc_fanteam_model'.
 - To support JC's work you can buy him a coffee here: https://ko-fi.com/fplspaceman
 - To support Vamps's work you can buy him a coffee here: https://ko-fi.com/ff_vamps
 
+You will be prompted as to which version to run. Enter FT for this format and amend a file called regular_settings_ft.json for configuring options.
+
 Updating your team on a weekly basis. Currently, this has to be done via a manual edit to a copy of the team.json file.
-See the SDT section above for more detail and the team_ft.sample file
+See the DT section above for more detail and the team_ft.sample file
 
 Note, I have left the free transfer limit as a max of 5 like FPL as I don't think it is wise to save more than that number. I have set them to reset to 1 after WC use.
 

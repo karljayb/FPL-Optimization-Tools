@@ -18,8 +18,8 @@ def read_data(options, source, weights=None):
         data = pd.read_csv(options.get('data_path', '../data/ftvamps.csv'))
         data['review_id'] = data['ID']
         return data
-    elif source == 'sdtvamps':
-        data = pd.read_csv(options.get('data_path', '../data/sdtvamps.csv'))
+    elif source == 'dtvamps':
+        data = pd.read_csv(options.get('data_path', '../data/dtvamps.csv'))
         data['review_id'] = data['ID']
         return data
     elif source == 'jc_fanteam':

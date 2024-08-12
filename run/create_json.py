@@ -2,7 +2,6 @@ import requests
 import sys
 import csv
 import json
-import subprocess
 from subprocess import Popen, DEVNULL
 
 def save_json_from_url(url, filename):
@@ -86,14 +85,13 @@ if __name__ == '__main__':
         csv_file_path = '../data/ftvamps.csv'
     elif 'jc_fanteam' in ff_format:
         csv_file_path = '../data/jc_fanteam_model.csv'
-    elif 'sdtvamps' in ff_format:
-        csv_file_path = '../data/sdtvamps.csv'
+    elif 'dtvamps' in ff_format:
+        csv_file_path = '../data/dtvamps.csv'
     
     
     
     # Read the CSV and get updates
     updates = read_csv(csv_file_path)
-    # print("Updates read from CSV:", updates)
     
     # Update the JSON file
     update_json(json_filename, updates)

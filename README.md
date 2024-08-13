@@ -324,7 +324,7 @@ Money left over or transfers already made:
 To run change the datasource to use a file in fplreview.csv column format but with the correct file name.
 You will need to have Player IDs that match the IDs used by FPL.
 
-This is currently only set up to work with two sources: 'ftvamps' or 'jc_fanteam_model'.
+This is currently only set up to work with the following sources: 'ftvamps', 'ftkris' or 'jc_fanteam_model'.
 - To support JC's work you can buy him a coffee here: https://ko-fi.com/fplspaceman
 - To support Vamps's work you can buy him a coffee here: https://ko-fi.com/ff_vamps
 

@@ -94,12 +94,14 @@ def generate_team_json(team_id):
     with requests.Session() as session:
         datasource = options.get('datasource', 'review')
 
-        if 'vamps' in datasource or 'jc_fanteam' in datasource:
+        if 'review' not in datasource:
             script_path = 'create_json.py'
             if 'jc_fanteam' in datasource:
                 ff_format = "jc_fanteam"
             elif 'ftvamps' in datasource:
                 ff_format = "ftvamps"
+            elif 'ftkris' in datasource:
+                ff_format = "ftkris"
             elif 'dtvamps' in datasource:
                 ff_format = "dtvamps"
             subprocess.run(['python', script_path, ff_format], check=True)
@@ -132,7 +134,7 @@ def generate_team_json(team_id):
 
     if 'dtvamps' in datasource:
         itb = 500 - sum(squad.values())
-    elif 'ftvamps2' in datasource or 'jc_fanteam2' in datasource:
+    elif 'ftvamps2' in datasource or 'jc_fanteam2' in datasource or 'ftkris2' in datasource:
         itb = 10000 - sum(squad.values())
     else:
         itb = 1000 - sum(squad.values())
@@ -204,7 +206,7 @@ def calculate_fts(transfers, next_gw, fh):
 def prep_data(my_data, options):
     datasource = options.get('datasource', 'review')
 
-    if 'vamps' in datasource or 'jc_fanteam' in datasource:
+    if 'review' not in datasource:
         script_path = 'create_json.py'
         if 'ftvamps' in datasource:
             ff_format = "ftvamps"
@@ -212,6 +214,8 @@ def prep_data(my_data, options):
             ff_format = "dtvamps"
         elif 'jc_fanteam' in datasource:
             ff_format = "jc_fanteam"
+        elif 'ftkris' in datasource:
+            ff_format = "ftkris"
         subprocess.run(['python', script_path, ff_format], check=True)
         # Path to your local JSON file
         json_file_path = '../run/bootstrap-static.json'
@@ -610,7 +614,7 @@ def solve_multi_period_fpl(data, options):
         model.add_constraints((free_transfers[w+1] <= 2 * aux[w] + 4 * (1-aux[w]) for w in gameweeks if w+1 in gameweeks), name='aux_ft_rel1')
         model.add_constraints((free_transfers[w+1] <= free_transfers[w] + 1 * (1-aux[w]) for w in gameweeks if w+1 in gameweeks), name='aux_ft_rel2')
     else:
-        if 'ftvamps' in datasource or 'jc_fanteam' in datasource:
+        if 'ftvamps' in datasource or 'jc_fanteam' in datasource or 'ftkris' in datasource:
             # Reset free transfers to 1 after wildcard use
             model.add_constraints((free_transfers[w+1] <= 1 + 4 * (1 - use_wc[w]) for w in gameweeks if w+1 in gameweeks), name='reset_ft_after_wc')
 

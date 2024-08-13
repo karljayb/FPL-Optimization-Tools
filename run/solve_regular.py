@@ -76,7 +76,7 @@ def solve_regular(runtime_options=None):
             datasource = options.get('datasource', 'review')
             if 'dtvamps' in datasource:
                 team_json_dir = '../data/team_dt.json'
-            elif 'ftvamps' in datasource or 'jc_fanteam' in datasource:
+            elif 'ftvamps' in datasource or 'jc_fanteam' in datasource or 'ftkris' in datasource:
                 team_json_dir = '../data/team_ft.json'
             else:
                 team_json_dir = '../data/team.json'

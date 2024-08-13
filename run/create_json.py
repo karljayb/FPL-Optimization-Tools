@@ -85,6 +85,8 @@ if __name__ == '__main__':
         csv_file_path = '../data/ftvamps.csv'
     elif 'jc_fanteam' in ff_format:
         csv_file_path = '../data/jc_fanteam_model.csv'
+    elif 'ftkris' in ff_format:
+        csv_file_path = '../data/ftkris.csv'
     elif 'dtvamps' in ff_format:
         csv_file_path = '../data/dtvamps.csv'
     

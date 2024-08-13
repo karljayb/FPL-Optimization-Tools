@@ -25,8 +25,10 @@ def solve_regular(runtime_options=None):
     sys.path.append(str(base_folder / "../src"))
     from multi_period_dev import connect, get_my_data, prep_data, solve_multi_period_fpl, generate_team_json
     import data_parser as pr
-    
-    ff_version = input("What FF Format are you trying to solve? Valid answers are 'DT', 'FPL', or 'FT' ")
+    if runtime_options == None:
+        ff_version = input("What FF Format are you trying to solve? Valid answers are 'DT', 'FPL', or 'FT' ")
+    else:
+        ff_version = None
 
     if is_colab:
         # Read options from the file

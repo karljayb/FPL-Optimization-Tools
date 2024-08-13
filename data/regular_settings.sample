@@ -16,6 +16,7 @@
     "xmin_lb": 59,
     "ev_per_price_cutoff": 20,
     "banned": [],
+    "banned_next_gw": [],
     "locked": [],
     "locked_next_gw": [],
     "keep": [],

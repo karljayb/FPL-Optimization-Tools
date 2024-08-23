@@ -735,7 +735,10 @@ def solve_multi_period_fpl(data, options):
 
     if options.get('locked', None) is not None:
         locked_players = options['locked']
-        model.add_constraints((squad[p,w] + squad_fh[p,w] == 1 for p in locked_players for w in gameweeks), name='lock_player')
+        if 'dtvamps' in datasource:
+            model.add_constraints((squad[p,w] == 1 for p in locked_players for w in gameweeks), name='lock_player')
+        else:
+            model.add_constraints((squad[p,w] + squad_fh[p,w] == 1 for p in locked_players for w in gameweeks), name='lock_player')
     
     if options.get('locked_next_gw', None) is not None:
         locked_in_gw = [(x, gameweeks[0]) if isinstance(x, int) else tuple(x) for x in options['locked_next_gw']]

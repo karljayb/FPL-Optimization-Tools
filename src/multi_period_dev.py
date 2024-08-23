@@ -462,7 +462,7 @@ def solve_multi_period_fpl(data, options):
     order = [0, 1, 2, 3]
     price_modified_players = data['price_modified_players']
     if 'dtvamps' not in datasource:    
-        ft_states = [1, 2, 3, 4, 5]
+        ft_states = [0, 1, 2, 3, 4, 5]
 
     # Model
     model = so.Model(name=problem_name)

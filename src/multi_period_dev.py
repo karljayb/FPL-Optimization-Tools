@@ -745,7 +745,7 @@ def solve_multi_period_fpl(data, options):
         model.add_constraint(so.expr_sum(transfer_in[p,w] for p in players for w in gameweeks if w > next_gw and w != options.get('use_wc')) == 0, name='no_future_transfer')
 
     if options.get("no_future_transfer_def"):
-        model.add_constraint(so.expr_sum(transfer_in[p,w] for p in players for w in gameweeks if merged_data.loc[p, 'Pos'] in {'D'} and w > next_gw and w != options.get('use_wc')) == 0, name='no_future_transfer_def')
+        model.add_constraint(so.expr_sum(transfer_in[p,w] for p in players for w in gameweeks if merged_data.loc[p, 'Pos'] in {'D'} and w >= next_gw and w != options.get('use_wc')) == 0, name='no_future_transfer_def')
 
     if options.get("no_transfer_last_gws"):
         no_tr_gws = options['no_transfer_last_gws']

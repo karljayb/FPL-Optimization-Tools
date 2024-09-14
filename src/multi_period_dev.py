@@ -126,7 +126,8 @@ def generate_team_json(team_id):
         chips = session.get(chips_url).json()["chips"]
         fh = [x for x in chips if x["name"] == "freehit"]
         if fh:
-            fh = fh[0]["event"]
+            fh = fh[0]["event"]        
+        wc_gws = [x['event'] for x in chips if x['name'] == 'wildcard']
 
     # squad will remain an ID:puchase_price map throughout iteration over transfers
     # once they have been iterated through, can then add on the current selling price
@@ -146,7 +147,7 @@ def generate_team_json(team_id):
         del squad[t["element_out"]]
         squad[t["element_in"]] = t["element_in_cost"]
 
-    fts = calculate_fts(transfers, next_gw, fh)
+    fts = calculate_fts(transfers, next_gw, fh, wc_gws)
     my_data = {
         "chips": [],
         "picks": [],
@@ -176,7 +177,7 @@ def generate_team_json(team_id):
     return my_data
 
 
-def calculate_fts(transfers, next_gw, fh):
+def calculate_fts(transfers, next_gw, fh, wc_gws):
     datasource = options.get('datasource', 'review')
     n_transfers = {gw: 0 for gw in range(2, next_gw)}
     for t in transfers:
@@ -188,7 +189,10 @@ def calculate_fts(transfers, next_gw, fh):
         fts[2] = 1
     for i in range(3, next_gw + 1):
         if (i - 1) == fh:
-            fts[i] = 1
+            fts[i] = fts[i-1]
+            continue
+        if i-1 in wc_gws:
+            fts[i] = fts[i-1]
             continue
         fts[i] = fts[i - 1]
         fts[i] -= n_transfers[i - 1]
@@ -199,7 +203,7 @@ def calculate_fts(transfers, next_gw, fh):
         else:
             fts[i] = max(fts[i], 0)
             fts[i] += 1
-            fts[i] = min(fts[i], 2)
+            fts[i] = min(fts[i], 5)
     return fts[next_gw]
 
 
@@ -354,7 +358,8 @@ def prep_data(my_data, options):
     # If wildcard is active, then you have: "status_for_entry": "active" under my_data['chips']
     for c in my_data['chips']:
         if c['name'] == 'wildcard' and c['status_for_entry'] == 'active':
-            ft = 1
+            if 'ftvamps' in datasource or 'jc_fanteam' in datasource or 'ftkris' in datasource:
+                ft = 1
             options['use_wc'] = gw
             if options['chip_limits']['wc'] == 0:
                 options['chip_limits']['wc'] = 1
@@ -519,6 +524,7 @@ def solve_multi_period_fpl(data, options):
     bought_amount = {w: so.expr_sum(buy_price[p] * transfer_in[p,w] for p in players) for w in gameweeks}
     points_player_week = {(p,w): merged_data.loc[p, f'{w}_Pts'] for p in players for w in gameweeks}
     minutes_player_week = {(p,w): merged_data.loc[p, f'{w}_xMins'] for p in players for w in gameweeks}
+    player_team = {p: merged_data.loc[p, 'name'] for p in players}
     squad_count = {w: so.expr_sum(squad[p, w] for p in players) for w in gameweeks}
     if 'dtvamps' not in datasource:
         squad_fh_count = {w: so.expr_sum(squad_fh[p, w] for p in players) for w in gameweeks}
@@ -723,34 +729,40 @@ def solve_multi_period_fpl(data, options):
             ft_penalty = {w: ft_use_penalty * transfer_count[w] for w in gameweeks}
 
     ## Optional constraints
-    if options.get('banned', None) is not None:
+    if options.get('banned', None):
+        print("OC - Banned")
         banned_players = options['banned']
         model.add_constraints((so.expr_sum(squad[p,w] for w in gameweeks) == 0 for p in banned_players), name='ban_player')
         if 'dtvamps' not in datasource:
             model.add_constraints((so.expr_sum(squad_fh[p,w] for w in gameweeks) == 0 for p in banned_players), name='ban_player_fh')
     
-    if options.get('banned_next_gw', None) is not None:
+    if options.get('banned_next_gw', None):
+        print("OC - Banned Next GW")
         banned_in_gw = [(x, gameweeks[0]) if isinstance(x, int) else tuple(x) for x in options['banned_next_gw']]
         model.add_constraints((squad[p0, p1] == 0 for (p0, p1) in banned_in_gw), name='ban_player_specified_gw')
 
-    if options.get('locked', None) is not None:
+    if options.get('locked', None):
+        print("OC - Locked")
         locked_players = options['locked']
         if 'dtvamps' in datasource:
             model.add_constraints((squad[p,w] == 1 for p in locked_players for w in gameweeks), name='lock_player')
         else:
             model.add_constraints((squad[p,w] + squad_fh[p,w] == 1 for p in locked_players for w in gameweeks), name='lock_player')
     
-    if options.get('locked_next_gw', None) is not None:
+    if options.get('locked_next_gw', None):
+        print("OC - Locked Next GW")
         locked_in_gw = [(x, gameweeks[0]) if isinstance(x, int) else tuple(x) for x in options['locked_next_gw']]
         model.add_constraints((squad[p0, p1] == 1 for (p0, p1) in locked_in_gw), name='lock_player_specified_gw')
 
-    if options.get("no_future_transfer"):
+    if options.get("no_future_transfer", None):
+        print("OC - No Future Tr")
         model.add_constraint(so.expr_sum(transfer_in[p,w] for p in players for w in gameweeks if w > next_gw and w != options.get('use_wc')) == 0, name='no_future_transfer')
 
     if options.get("no_future_transfer_def"):
         model.add_constraint(so.expr_sum(transfer_in[p,w] for p in players for w in gameweeks if merged_data.loc[p, 'Pos'] in {'D'} and w >= next_gw and w != options.get('use_wc')) == 0, name='no_future_transfer_def')
 
-    if options.get("no_transfer_last_gws"):
+    if options.get("no_transfer_last_gws", None):
+        print("OC - No TR last GWs")
         no_tr_gws = options['no_transfer_last_gws']
         if horizon > no_tr_gws:
             if 'dtvamps' in datasource:
@@ -758,26 +770,40 @@ def solve_multi_period_fpl(data, options):
             else:
                 model.add_constraints((so.expr_sum(transfer_in[p,w] for p in players) <= 15 * use_wc[w] for w in gameweeks if w > last_gw - no_tr_gws), name='tr_ban_gws')
 
-    if options.get("num_transfers", None) is not None:
+    if options.get("num_transfers", None):
+        print("OC - Num Transfers")
         model.add_constraint(so.expr_sum(transfer_in[p,next_gw] for p in players) == options['num_transfers'], name='tr_limit')
     if 'dtvamps' in datasource:
         options["hit_limit"] = 0
-    if options.get("hit_limit", None) is not None:
-        model.add_constraint(so.expr_sum(penalized_transfers[w] for w in gameweeks) <= options['hit_limit'], name='horizon_hit_limit')
+    if options.get("hit_limit", None):
+        print("OC - Hit Limit")
+        model.add_constraint(so.expr_sum(penalized_transfers[w] for w in gameweeks) <= int(options['hit_limit']), name='horizon_hit_limit')
+
+    if options.get("weekly_hit_limit") is not None:
+        weekly_hit_limit = int(options.get('weekly_hit_limit'))
+        model.add_constraints((penalized_transfers[w] <= weekly_hit_limit for w in gameweeks), name='gw_hit_lim')
     
     # pre 2024-25 season
     # if options.get("ft_custom_value", None) is not None:
     #     ft_custom_value = {int(key): value for (key, value) in options.get('ft_custom_value', {}).items()}
     #     ft_gw_value = {**{gw: ft_value for gw in gameweeks}, **ft_custom_value}
 
-    if options.get("future_transfer_limit", None) is not None:
+    if options.get("future_transfer_limit", None):
+        print("OC - Future TR Limit")
         model.add_constraint(so.expr_sum(transfer_in[p,w] for p in players for w in gameweeks if w > next_gw and w != options.get('use_wc')) <= options['future_transfer_limit'], name='future_tr_limit')
 
-    if options.get("no_transfer_gws", None) is not None:
+    if options.get("no_transfer_gws", None):
+        print("OC - No TR GWs")
         if len(options['no_transfer_gws']) > 0:
             model.add_constraint(so.expr_sum(transfer_in[p,w] for p in players for w in options['no_transfer_gws']) == 0, name='banned_gws_for_tr')
+
+    if options.get('no_transfer_by_position', None):
+        print("OC - No TR by position")
+        if len(options['no_transfer_by_position']) > 0:
+            model.add_constraints((transfer_in[p,w] <= use_wc[w] for p in players for w in gameweeks if w > 1 if merged_data.loc[p, 'Pos'] in options['no_transfer_by_position']), name='no_tr_by_pos')
     
     for booked_transfer in booked_transfers:
+        print("OC - Booked TRs")
         transfer_gw = booked_transfer.get('gw', None)
 
         if transfer_gw is None:
@@ -793,18 +819,59 @@ def solve_multi_period_fpl(data, options):
             model.add_constraint(transfer_out[player_out, transfer_gw] == 1,
                                  name=f'booked_transfer_out_{transfer_gw}_{player_out}')
 
+    cp_penalty = {}
     if options.get('no_opposing_play') is True:
+        print("OC - No Opposing Play")
+        gw_opp_teams = {w: [(f['home'], f['away']) for f in fixtures if f['gw'] == w] + [(f['away'], f['home']) for f in fixtures if f['gw'] == w] for w in gameweeks}
         for gw in gameweeks:
             gw_games = [i for i in fixtures if i['gw'] == gw]
             if options.get('opposing_play_group', 'all') == 'all':            
-                opposing_players = [(p1,p2) for f in gw_games for p1 in players if merged_data.loc[p1, 'name'] == f['home'] for p2 in players if merged_data.loc[p2, 'name'] == f['away']]
+                opposing_players = [(p1,p2) for p1 in players for p2 in players if (player_team[p1], player_team[p2]) in gw_opp_teams]
                 model.add_constraints((lineup[p1,gw] + lineup[p2,gw] <= 1 for (p1,p2) in opposing_players), name=f'no_opp_{gw}')
             elif options.get('opposing_play_group') == 'position':
                 opposing_positions = [(1,3),(1,4),(2,3),(2,4),(3,1),(4,1),(3,2),(4,2)] # gk vs mid, gk vs fwd, def vs mid, def vs fwd
-                opposing_players = [(p1,p2) for f in gw_games for p1 in players if merged_data.loc[p1, 'name'] == f['home'] for p2 in players if merged_data.loc[p2, 'name'] == f['away'] and (player_type[p1], player_type[p2]) in opposing_positions]
+                opposing_players = [(p1,p2) for p1 in players for p2 in players if (player_team[p1], player_team[p2]) in gw_opp_teams and (player_type[p1], player_type[p2]) in opposing_positions]
                 model.add_constraints((lineup[p1,gw] + lineup[p2,gw] <= 1 for (p1,p2) in opposing_players), name=f'no_opp_{gw}')
+    elif options.get('no_opposing_play') == 'penalty':
+        print("OC - Penalty Opposing Play")
+        gw_opp_teams = {w: [(f['home'], f['away']) for f in fixtures if f['gw'] == w] + [(f['away'], f['home']) for f in fixtures if f['gw'] == w] for w in gameweeks}
+        if options.get('opposing_play_group') == 'all':
+            cp_list = [(p1,p2,w)
+                for p1 in players
+                for p2 in players
+                for w in gameweeks
+                if (player_team[p1], player_team[p2]) in gw_opp_teams[w]
+                and minutes_player_week[p1,w] > 0 and minutes_player_week[p2,w] > 0
+                ]
+        elif options.get('opposing_play_group', 'position') == 'position':
+            opposing_positions = [(1,3),(1,4),(2,3),(2,4),(3,1),(4,1),(3,2),(4,2)]
+            cp_list = [(p1,p2,w)
+                for p1 in players
+                for p2 in players
+                for w in gameweeks
+                if (player_team[p1], player_team[p2]) in gw_opp_teams[w]
+                and minutes_player_week[p1,w] > 0 and minutes_player_week[p2,w] > 0
+                and (player_type[p1], player_type[p2]) in opposing_positions
+                ]
+        cp_pen_var = model.add_variables(cp_list, name='cp_v', vartype=so.binary)
+        opposing_play_penalty = options.get('opposing_play_penalty', 0.5)
+        cp_penalty = {w: opposing_play_penalty * so.expr_sum(cp_pen_var[p1,p2,w1] for (p1,p2,w1) in cp_list if w1 == w) for w in gameweeks}
+        model.add_constraints((lineup[p1,w] + lineup[p2,w] <= 1 + cp_pen_var[p1,p2,w] for (p1,p2,w) in cp_list), name='cp1')
+        model.add_constraints((cp_pen_var[p1,p2,w] <= lineup[p1,w] for (p1,p2,w) in cp_list), name='cp2')
+        model.add_constraints((cp_pen_var[p1,p2,w] <= lineup[p2,w] for (p1,p2,w) in cp_list), name='cp3')
 
-    if options.get("pick_prices") is not None:
+
+    if options.get('double_defense_pick') is True:
+        print("OC - Double Defense Pick")
+        team_players = {t: [p for p in players if player_team[p] == t] for t in teams}
+        gk_df_players = {t: [p for p in team_players[t] if player_type[p] == 1 or player_type[p] == 2] for t in teams}
+        weekly_sum = {(t,w): so.expr_sum(lineup[p,w] for p in gk_df_players[t]) for t in teams for w in gameweeks}
+        def_aux = model.add_variables(teams, gameweeks, vartype=so.binary, name='daux')
+        model.add_constraints((weekly_sum[t,w] <= 3 * def_aux[t,w] for t in teams for w in gameweeks), name='dauxc1')
+        model.add_constraints((weekly_sum[t,w] >= 2 - 3 * (1 - def_aux[t,w]) for t in teams for w in gameweeks), name='dauxc2')
+
+    if options.get("pick_prices", None) not in [None, {"G": "", "D": "", "M": "", "F": ""}]:
+        print("OC - Pick Prices")
         buffer = 0.2
         price_choices = options["pick_prices"]
         for (pos,val) in price_choices.items():
@@ -818,16 +885,19 @@ def solve_multi_period_fpl(data, options):
                 model.add_constraints((so.expr_sum(squad[p,w] for p in target_players) >= count for w in gameweeks), name=f'price_point_{pos}_{con_iter}')
                 con_iter += 1
                 
-    if options.get("no_gk_rotation_after") is not None:
+    if options.get("no_gk_rotation_after", None):
+        print("OC - No GK rotation")
         target_gw = int(options['no_gk_rotation_after'])
         players_gk = [p for p in players if player_type[p] == 1]
         model.add_constraints((lineup[p,w] >= lineup[p,target_gw] - use_fh[w] for p in players_gk for w in gameweeks if w > target_gw), name='fixed_lineup_gk')
 
     if len(options.get("no_chip_gws", [])) > 0:
+        print("OC - No Chip GWs")
         no_chip_gws = options['no_chip_gws']
         model.add_constraint(so.expr_sum(use_bb[w] + use_wc[w] + use_fh[w] for w in no_chip_gws) == 0, name='no_chip_gws')
 
     if options.get('only_booked_transfers') is True:
+        print("OC - Only Booked Transfers")
         forced_in = []
         forced_out = []
         for bt in options.get('booked_transfers', []):
@@ -846,15 +916,18 @@ def solve_multi_period_fpl(data, options):
     #     for gw in options['have_2ft_in_gws']:
     #         model.add_constraint(free_transfers[gw] == 2, name=f'have_2ft_{gw}')
 
-    if options.get('force_ft_state_lb', None) is not None:
+    if options.get('force_ft_state_lb', None):
+        print("OC - Force FT LB")
         for gw,ft_pos in options['force_ft_state_lb']:
             model.add_constraint(free_transfers[gw] >= ft_pos, name=f'cft_lb_{gw}')
 
-    if options.get('force_ft_state_ub', None) is not None:
+    if options.get('force_ft_state_ub', None):
+        print("OC - Force FT UB")
         for gw,ft_pos in options['force_ft_state_ub']:
             model.add_constraint(free_transfers[gw] <= ft_pos, name=f'cft_ub_{gw}')
 
     if options.get('no_trs_except_wc', False) is True:
+        print("OC - No TRS except WC")
         model.add_constraints((number_of_transfers[w] <= 15 * use_wc[w] for w in gameweeks), name='wc_trs_only')
 
     # FT gain 2024-2025

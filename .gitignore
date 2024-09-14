@@ -16,3 +16,4 @@ run/HiGHS.log
 run/tmp/*
 scripts
 run/bootstrap-static.json
+run/solutions.csv

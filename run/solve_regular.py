@@ -7,11 +7,49 @@ import pandas as pd
 import argparse
 import random
 import string
+import time
+import csv
 
 
 def get_random_id(n):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(n))
 
+def write_line_to_file(solutions, options):
+    # Load the mapping of FPL_ID to ID
+    fanteam_players = pd.read_csv("../scripts/update players/Fanteam_Players_updated.csv")
+    id_mapping = fanteam_players.set_index("FPL_ID")["ID"].to_dict()
+
+    t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    gw = 2
+    for result in solutions:
+        picks = result["picks"]
+
+        # Replace FPL_ID with the corresponding ID from Fanteam_Players_updated.csv
+        picks["mapped_id"] = picks["id"].map(id_mapping)
+
+        lineup_players = ",".join(
+            picks[(picks["week"] == gw) & (picks["lineup"] > 0.5)]["mapped_id"]
+            .astype(str)
+            .to_list()
+        )
+        bench_players = ",".join(
+            picks[(picks["week"] == gw) & (picks["bench"] > -0.5)]["mapped_id"]
+            .astype(str)
+            .to_list()
+        )
+        cap = picks[(picks["week"] == gw) & (picks["captain"] > 0.5)].iloc[0]["mapped_id"]
+        vcap = picks[(picks["week"] == gw) & (picks["vicecaptain"] > 0.5)].iloc[0]["mapped_id"]
+
+        lineup_players = lineup_players.split(",")
+        bench_players = bench_players.split(",")
+
+        team_id = options.get("team_id")
+        data = [team_id] + lineup_players + bench_players + [cap, vcap, t]
+
+    filename = options.get("solutions_file", "solutions.csv")
+    with open(filename, "a", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(data)
 
 def solve_regular(runtime_options=None):
 
@@ -95,6 +133,9 @@ def solve_regular(runtime_options=None):
                 exit(0)
     data = prep_data(my_data, options)
     response = solve_multi_period_fpl(data, options)
+    #if 'ftvamps' in datasource or 'jc_fanteam' in datasource or 'ftkris' in datasource:
+        #write_line_to_file(response, options)
+
     run_id = get_random_id(5)
     
     for result in response:

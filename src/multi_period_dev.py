@@ -576,7 +576,7 @@ def solve_multi_period_fpl(data, options):
     model.add_constraints((squad[p, next_gw-1] == 1 for p in initial_squad), name='initial_squad_players')
     model.add_constraints((squad[p, next_gw-1] == 0 for p in players if p not in initial_squad), name='initial_squad_others')
     model.add_constraint(in_the_bank[next_gw-1] == itb, name='initial_itb')
-    if 'ftvamps' in datasource or 'jc_fanteam' in datasource or 'ftkris' in datasource:
+    if 'ftvamps' in datasource or 'jc_fanteam' in datasource or 'ftkris' in datasource or 'dtvamps' in datasource:
         model.add_constraint(free_transfers[next_gw] == ft, name='initial_ft')
     else:
         model.add_constraint(free_transfers[next_gw] == ft * (1-use_wc[next_gw]) + ft_base * use_wc[next_gw], name='initial_ft')

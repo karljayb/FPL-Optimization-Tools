@@ -746,9 +746,9 @@ def solve_multi_period_fpl(data, options):
     if options.get('banned', None):
         print("OC - Banned")
         banned_players = options['banned']
-        model.add_constraints((so.expr_sum(squad[p,w] for w in gameweeks) == 0 for p in banned_players), name='ban_player')
+        model.add_constraints((so.expr_sum(squad[p,w] for w in gameweeks) == 0 for p in banned_players if p in players), name='ban_player')
         if 'dtvamps' not in datasource:
-            model.add_constraints((so.expr_sum(squad_fh[p,w] for w in gameweeks) == 0 for p in banned_players), name='ban_player_fh')
+            model.add_constraints((so.expr_sum(squad_fh[p,w] for w in gameweeks) == 0 for p in banned_players if p in players), name='ban_player_fh')
     
     if options.get('banned_next_gw', None):
         print("OC - Banned Next GW")

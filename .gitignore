@@ -17,3 +17,5 @@ run/tmp/*
 scripts
 run/bootstrap-static.json
 run/solutions.csv
+data/results/*
+.DS_Store

@@ -4,6 +4,8 @@ import argparse
 from collections import Counter
 
 
+pd.set_option("display.max_rows", None)
+
 def read_sensitivity(options=None):
 
     directory = "../data/results"
@@ -356,7 +358,7 @@ def read_sensitivity(options=None):
             fwds = calculate_percentage(fwds, no_plans)
 
             # Function to print DataFrame with aligned columns and without the redundant "player" prefix
-            def print_dataframe(df, title, use_color=False, psb_threshold=0.05):
+            def print_dataframe(df, title, use_color=False, psb_threshold=0.00):
                 print(f"{title}:")
                 # Sort the DataFrame by PSB_count in descending order
                 df = df.sort_values(by="#_PSB", ascending=False).reset_index(drop=True)

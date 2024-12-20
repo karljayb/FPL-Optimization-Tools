@@ -89,7 +89,9 @@ def get_my_data(session, team_id):
     return d
 
 
-def generate_team_json(team_id):
+def generate_team_json(team_id, options):
+    if 'review' in datasource:
+        price_changes = {pid: change for pid, change in options.get("price_changes", [])}
     BASE_URL = "https://fantasy.premierleague.com/api"
     with requests.Session() as session:
         datasource = options.get('datasource', 'review')
@@ -160,6 +162,9 @@ def generate_team_json(team_id):
     }
     for player_id, purchase_price in squad.items():
         now_cost = [x for x in static["elements"] if x["id"] == player_id][0]["now_cost"]
+        if 'review' in datasource:
+            if player_id in price_changes:
+                now_cost += price_changes[player_id]
 
         diff = now_cost - purchase_price
         if diff > 0:
@@ -249,6 +254,12 @@ def prep_data(my_data, options):
     else:
         r = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/')
         fpl_data = r.json()
+        valid_ids = [x["id"] for x in fpl_data["elements"]]
+        for pid, change in options.get("price_changes", []):
+            if pid not in valid_ids:
+                continue
+            player = [x for x in fpl_data["elements"] if x["id"] == pid][0]
+            player["now_cost"] += change
     
 
     gw = 0

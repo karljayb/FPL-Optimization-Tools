@@ -166,6 +166,7 @@ You will need to follow steps below to install required platform and also optimi
   - `bench_weights`: percentage weights in objective for bench players (gk and 3 outfield)
   - `banned`: list of player IDs to be banned over the entire horizon
   - `banned_next_gw`: list of player IDs to be banned for the next gameweek. Alternatively, you can supply an `[ID, gameweek]` list as an element of the list to ban a player just for one specific gameweek. E.g. `[100, [200, 32]]` bans player with ID 100 for the next gameweek, and bans player with ID 200 for gameweek 32
+  - `price_changes`: Supply a list of `[ID, price_change]` pairs to solve as if a player's price has risen or dropped compared to the live price. E.g. `[[311, 1], [351, -1]]` will solve as if Alexander-Arnold's price is £0.1m higher, and Haaland's price is £0.1m lower than it is in reality.
   - `locked`: list of player IDs to always have during the horizon (e.g. `233` for Salah)
   - `locked_next_gw`: List of player IDs to force just for the next gameweek. See `banned_next_gw` for extended usage
   - `delete_tmp`: `true` or `false` whether to delete generated temporary files after solve

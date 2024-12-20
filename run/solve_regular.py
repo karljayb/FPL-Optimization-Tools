@@ -9,7 +9,7 @@ import random
 import string
 import time
 import csv
-
+import requests
 
 def get_random_id(n):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(n))
@@ -112,7 +112,7 @@ def solve_regular(runtime_options=None):
             if team_id is None:
                 print("You must supply your team_id in data/regular_settings.json")
                 exit(0)
-            my_data = generate_team_json(team_id)
+            my_data = generate_team_json(team_id, options)
         else:
             datasource = options.get('datasource', 'review')
             if 'dtvamps' in datasource:
@@ -124,6 +124,22 @@ def solve_regular(runtime_options=None):
             try:
                 with open(team_json_dir) as f:
                     my_data = json.load(f)
+                    if 'review' in datasource:
+                        price_changes = options.get("price_changes", [])
+                        if price_changes:
+                            my_squad_ids = [x["element"] for x in my_data["picks"]]
+                            with requests.Session() as s:
+                                r = s.get("https://fantasy.premierleague.com/api/bootstrap-static/").json()["elements"]
+                            current_prices = {x["id"]: x["now_cost"] for x in r if x["id"] in my_squad_ids}
+                            for pid, change in price_changes:
+                                if pid not in my_squad_ids:
+                                    continue
+                                new_price = current_prices[pid] + change
+                                player = [x for x in my_data["picks"] if x["element"] == pid][0]
+                                if player["purchase_price"] >= new_price:
+                                    player["selling_price"] = new_price
+                                else:
+                                    player["selling_price"] = player["purchase_price"] + (new_price - player["purchase_price"]) // 2
             except FileNotFoundError:
                 print(
                     """You must either:

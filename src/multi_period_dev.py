@@ -1070,6 +1070,11 @@ def solve_multi_period_fpl(data, options):
                 f.write(f"mip_rel_gap = {gap}")
 
             command = f'{highs_exec} --parallel on --options_file {opt_file_name} --presolve {presolve} --model_file {mps_file_name} --time_limit {secs} --solution_file {sol_file_name}'
+
+            if os.name != 'nt' and use_cmd is False:
+                print("Non-Windows OS is detected. Setting use_cmd to true")
+                use_cmd = True
+                
             if use_cmd:
                 # highs occasionally freezes in Windows, if it happens, try use_cmd value as False
                 print('If you are using Windows, HiGHS occasionally freezes after solves are completed. Use \n"use_cmd": false\nin regular settings if it happens.')
